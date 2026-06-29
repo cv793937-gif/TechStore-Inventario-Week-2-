@@ -117,6 +117,6 @@ Backend Jr
 
 Compras técnicas con manejo de datos
 
-
+techstore_bd.png
 
 BI con bases limpias
