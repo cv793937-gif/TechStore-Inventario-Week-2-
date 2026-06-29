@@ -116,7 +116,7 @@ SQL Developer
 Backend Jr
 
 Compras técnicas con manejo de datos
+![Inventario TechStore](techstore_bd.png)
 
-techstore_bd.png
 
 BI con bases limpias
