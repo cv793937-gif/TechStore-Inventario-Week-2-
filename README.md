@@ -1,256 +1,120 @@
--- ======================================
--- ENTREGA WEEK 2 — TECHSTORE INVENTARIO
--- Nombre: [Christian Velazquez]  |  Fecha: [28-06-2026]
--- ======================================
+TechStore Inventario (Week 2)
+🎯 Resumen del Proyecto
+Implementación completa del módulo de Inventario y Ventas para TechStore, utilizando MySQL con enfoque en buenas prácticas, auditoría, transacciones y control seguro de datos.
+El proyecto cubre desde la creación de la base de datos hasta operaciones críticas como UPDATE, DELETE y ventas atómicas.
 
--- DROP DATABASE IF EXISTS techstore_inventario; ejecutar solo si ya se habia creado la base de datos 
-CREATE DATABASE techstore_inventario;
-USE techstore_inventario;
+🧱 Arquitectura del Proyecto
+El script está organizado en 6 fases, cada una con objetivos claros y verificación antes de ejecutar cambios:
 
-SELECT DATABASE();  -- debe imprimir 'techstore_inventario'
+Creación de la base y tablas principales
 
--- FASE 1
--- Crear la tabla productos
-CREATE TABLE productos (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    codigo_producto VARCHAR(20) UNIQUE NOT NULL,
-    nombre VARCHAR(150) NOT NULL,
-    descripcion TEXT,
-    categoria VARCHAR(50) NOT NULL,
-    precio DECIMAL(10,2) NOT NULL,
-    costo DECIMAL(10,2) NOT NULL,
-    stock INT DEFAULT 0,
-    stock_minimo INT DEFAULT 5,
-    proveedor VARCHAR(100),
-    activo BOOLEAN DEFAULT TRUE,
-    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
+productos
 
--- Crear tabla ventas 
-CREATE TABLE ventas (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    producto_id INT NOT NULL,
-    cantidad INT NOT NULL,
-    precio_venta DECIMAL(10,2) NOT NULL,
-    total DECIMAL(10,2) NOT NULL,
-    fecha_venta TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+ventas
 
--- Verifica
-SHOW TABLES;
-DESCRIBE productos;
-DESCRIBE ventas;
+Campos de auditoría (fecha_creacion, fecha_actualizacion)
 
--- Fase 2 — Cargar el catálogo y las primeras ventas
--- 2.1 — Insertar 20 productos
--- Cuatro categorías (Laptops, Periféricos, Audio, Componentes), precios entre $19 y $1,499, stock variado, algunos productos sin descripción (NULL).
-INSERT INTO productos
-    (codigo_producto, nombre, descripcion, categoria, precio, costo, stock, stock_minimo, proveedor, activo)
-VALUES
-    -- Laptops
-    ('LAP001', 'Laptop HP Pavilion 15', 'Laptop Intel i5, 8GB RAM, 256GB SSD', 'Laptops', 799.99, 650.00, 12, 5, 'HP Inc', TRUE),
-    ('LAP002', 'MacBook Air M2', 'Apple MacBook Air con chip M2, 8GB, 256GB', 'Laptops', 1299.99, 1050.00, 8, 3, 'Apple', TRUE),
-    ('LAP003', 'Dell XPS 13', 'Ultrabook Dell XPS 13, i7, 16GB, 512GB SSD', 'Laptops', 1499.99, 1200.00, 5, 3, 'Dell', TRUE),
-    ('LAP004', 'Lenovo ThinkPad', NULL, 'Laptops', 899.99, 720.00, 0, 5, 'Lenovo', FALSE),
+Estructura robusta para inventarios reales.
 
-    -- Periféricos
-    ('PER001', 'Mouse Logitech MX Master 3', 'Mouse ergonómico inalámbrico', 'Perifericos', 99.99, 65.00, 35, 10, 'Logitech', TRUE),
-    ('PER002', 'Teclado Mecánico Keychron K2', 'Teclado mecánico RGB, switches Gateron Brown', 'Perifericos', 89.99, 55.00, 20, 8, 'Keychron', TRUE),
-    ('PER003', 'Webcam Logitech C920', 'Webcam Full HD 1080p', 'Perifericos', 79.99, 50.00, 15, 10, 'Logitech', TRUE),
-    ('PER004', 'Hub USB-C 7 puertos', NULL, 'Perifericos', 45.99, 25.00, 50, 15, 'Anker', TRUE),
-    ('PER005', 'Mouse Pad XL', 'Mouse pad gaming 90x40cm', 'Perifericos', 24.99, 10.00, 80, 20, 'SteelSeries', TRUE),
-    ('PER006', 'Soporte Laptop Ajustable', 'Soporte ergonómico aluminio', 'Perifericos', 39.99, 20.00, 25, 10, 'Rain Design', TRUE),
+Carga inicial del catálogo y ventas
 
-    -- Audio
-    ('AUD001', 'Audífonos Sony WH-1000XM5', 'Audífonos con cancelación de ruido', 'Audio', 399.99, 280.00, 10, 5, 'Sony', TRUE),
-    ('AUD002', 'Audífonos Gaming HyperX', NULL, 'Audio', 79.99, 45.00, 30, 10, 'HyperX', TRUE),
-    ('AUD003', 'Micrófono Blue Yeti', 'Micrófono USB profesional', 'Audio', 129.99, 85.00, 12, 6, 'Logitech', TRUE),
-    ('AUD004', 'Parlantes Logitech Z623', 'Sistema 2.1, 200W', 'Audio', 149.99, 95.00, 8, 5, 'Logitech', TRUE),
-    ('AUD005', 'Audífonos Bluetooth JBL', 'Audífonos inalámbricos portátiles', 'Audio', 49.99, 25.00, 2, 10, 'JBL', TRUE),
+20 productos en 4 categorías
 
-    -- Componentes
-    ('COM001', 'SSD Samsung 1TB', 'SSD NVMe M.2 1TB', 'Componentes', 89.99, 60.00, 40, 15, 'Samsung', TRUE),
-    ('COM002', 'RAM Corsair 16GB DDR4', '16GB (2x8GB) DDR4 3200MHz', 'Componentes', 79.99, 50.00, 25, 10, 'Corsair', TRUE),
-    ('COM003', 'Monitor LG 27" 4K', 'Monitor IPS 27 pulgadas 4K', 'Componentes', 449.99, 320.00, 7, 5, 'LG', TRUE),
-    ('COM004', 'Cable HDMI 2.1 - 2m', NULL, 'Componentes', 19.99, 8.00, 100, 30, 'Cable Matters', TRUE),
-    ('COM005', 'Adaptador USB-C a HDMI', 'Adaptador 4K 60Hz', 'Componentes', 29.99, 15.00, 60, 20, 'Anker', TRUE);
+5 ventas iniciales
 
--- 2.2 — Insertar 5 ventas iniciales
-INSERT INTO ventas (producto_id, cantidad, precio_venta, total) VALUES
-    (1,  2,  799.99, 1599.98),
-    (5,  5,   99.99,  499.95),
-    (6,  3,   89.99,  269.97),
-    (11, 1,  399.99,  399.99),
-    (16, 4,   89.99,  359.96);
+Datos realistas con costos, precios y stock.
 
--- Verifica
-SELECT COUNT(*) FROM productos;  -- 20
-SELECT COUNT(*) FROM ventas;     -- 5
-SELECT categoria, COUNT(*) FROM productos GROUP BY categoria;
+Operaciones críticas con UPDATE y transacciones
 
--- Fase 3 — UPDATE: el verbo más peligroso
--- Paso 1 — VERIFICAR (este bloque NO cambia nada)
-SELECT nombre, precio, ROUND(precio * 1.10, 2) AS nuevo_precio
-FROM productos
-WHERE categoria = 'Audio';
+Incremento de precios por categoría
 
--- Paso 2 — EJECUTAR (este bloque SÍ cambia los datos)
-SET SQL_SAFE_UPDATES = 0;   -- quitas el seguro (Safe Updates) solo para este disparo
-UPDATE productos
-SET precio = precio * 1.10
-WHERE categoria = 'Audio';
-SET SQL_SAFE_UPDATES = 1;   -- vuelves a poner el seguro, de inmediato
+Reducción de stock basada en ventas
 
--- Paso 3 — CONFIRMAR (¿quedó como esperaba?)
--- Corre solo este SELECT para comprobar el resultado real:
-SELECT nombre, precio
-FROM productos
-WHERE categoria = 'Audio';
+Activación/desactivación automática según stock
 
--- 3.2 — Reducir stock por las ventas hechas en Fase 2
--- Paso 1 — Abrir el borrador y aplicar los 5 cambios (a lápiz)
--- Selecciona y corre estos 6 statements juntos:
-START TRANSACTION;
+Uso correcto de SQL_SAFE_UPDATES
 
-UPDATE productos SET stock = stock - 2 WHERE id = 1;   -- venta 1: 2 unidades
-UPDATE productos SET stock = stock - 5 WHERE id = 5;   -- venta 2: 5 unidades
-UPDATE productos SET stock = stock - 3 WHERE id = 6;   -- venta 3: 3 unidades
-UPDATE productos SET stock = stock - 1 WHERE id = 11;  -- venta 4: 1 unidad
-UPDATE productos SET stock = stock - 4 WHERE id = 16;  -- venta 5: 4 unidades
+Transacciones con START TRANSACTION + COMMIT.
 
--- Paso 2 — Revisar el borrador ANTES de entregar
-SELECT id, nombre, stock FROM productos WHERE id IN (1, 5, 6, 11, 16);
+Soft delete vs Hard delete
 
--- Paso 3 — Entregar en limpio (COMMIT)
-COMMIT;
+Implementación de deleted_at
 
--- 3.3 — Marcar como inactivos los productos con stock bajo
--- Paso 1 — VERIFICAR quiénes están bajo mínimo
+Borrado lógico para catálogo
 
-SELECT nombre, stock, stock_minimo
-FROM productos
-WHERE stock < stock_minimo;
+Borrado físico para ventas antiguas
 
--- Paso 2 — EJECUTAR el cambio
+Auditoría clara de elementos eliminados.
 
-SET SQL_SAFE_UPDATES = 0;
+Venta atómica real
 
-UPDATE productos
-SET activo = FALSE
-WHERE stock < stock_minimo;
+Verificación de stock
 
-SET SQL_SAFE_UPDATES = 1;
+Captura del precio actual
 
--- Paso 3 — CONFIRMAR
-SELECT nombre, stock, stock_minimo, activo
-FROM productos
-WHERE activo = FALSE;
+Inserción de venta y actualización de stock en una sola transacción
 
---  ¿Notaste que fecha_actualizacion cambió sola? Verifícalo:
-SELECT nombre, fecha_creacion, fecha_actualizacion FROM productos WHERE id IN (1, 5);
--- fecha_actualizacion debe ser HOY, fecha_creacion debe ser HOY también pero más temprano.
+Garantía de consistencia ACID.
 
--- Fase 4 — DELETE: soft vs hard
--- 4.1 — Soft delete del Lenovo ThinkPad
--- Paso 1 — Agregar la columna deleted_at (esto es DDL: cambia la ESTRUCTURA)
-ALTER TABLE productos ADD COLUMN deleted_at TIMESTAMP NULL;
--- Paso 2 — "Borrar" el Lenovo (que en realidad es un UPDATE)
-UPDATE productos
-SET deleted_at = CURRENT_TIMESTAMP
-WHERE codigo_producto = 'LAP004';
--- Paso 3 — Ver el catálogo "vivo" (lo que vería un cliente)
-SELECT id, nombre FROM productos WHERE deleted_at IS NULL;
--- Paso 4 — Auditar lo "borrado" (lo que el cliente NO ve, pero tú sí)
-SELECT id, nombre, deleted_at FROM productos WHERE deleted_at IS NOT NULL;
+Reportes avanzados (Bonus)
 
--- 4.2 — Hard delete: ventas viejas
--- Paso 1 — VERIFICAR qué se borraría (antes de borrar nada)
-SELECT *
-FROM ventas
-WHERE fecha_venta < '2023-01-01';
+Productos con stock bajo (priorizados)
 
--- Paso 2 — EJECUTAR el DELETE
-SET SQL_SAFE_UPDATES = 0;
+Top 10 por margen de ganancia
 
-DELETE FROM ventas WHERE fecha_venta < '2023-01-01';
+Revenue por categoría con JOIN
 
-SET SQL_SAFE_UPDATES = 1;
+Reportes listos para BI / dashboards.
 
--- Paso 3 — CONFIRMAR que no perdimos nada
-SELECT COUNT(*) FROM ventas;
+🔥 Buenas Prácticas Aplicadas
+✔ Control de cambios con Verificar → Ejecutar → Confirmar  
+✔ Uso de transacciones para evitar inconsistencias
+✔ Separación clara entre soft delete y hard delete  
+✔ Auditoría automática con fecha_actualizacion  
+✔ Queries seguros con SQL_SAFE_UPDATES  
+✔ Catálogo limpio y filtrado con deleted_at IS NULL  
+✔ Reportes listos para análisis empresarial
+✔ Comentarios claros y estructura profesional del script
 
--- Fase 5 — Una venta atómica de verdad
--- Paso 1 — Abrir la transacción y verificar que hay stock --
-START TRANSACTION;
+📊 Qué demuestra este proyecto
+Este entregable muestra dominio en:
 
-SELECT id, nombre, stock, precio
-FROM productos
-WHERE id = 9 AND stock >= 3 AND deleted_at IS NULL;
+Diseño de bases de datos
 
--- Paso 2 — Reducir el stock (a lápiz) --
-UPDATE productos
-SET stock = stock - 3
-WHERE id = 9;
--- Paso 3 — Capturar el precio actual en una variable --
-SELECT @precio_actual := precio FROM productos WHERE id = 9;
+SQL profesional (DDL, DML, transacciones, auditoría)
 
--- Paso 4 — Registrar la venta usando el precio capturado --
-INSERT INTO ventas (producto_id, cantidad, precio_venta, total)
-VALUES (9, 3, @precio_actual, @precio_actual * 3);
+Inventarios reales
 
--- Paso 5 — Verificar las dos mitades antes de cerrar --
-SELECT id, nombre, stock FROM productos WHERE id = 9;
-SELECT * FROM ventas WHERE id = LAST_INSERT_ID();
+Control de stock
 
--- Paso 6 — Cerrar la venta (COMMIT)
-COMMIT;
+Procesos seguros de actualización
 
--- Fase 6 — Entrega + 3 reportes bonus --
--- Reporte 1 — Productos en alerta de stock bajo (con prioridad)
- -- > "Dame los productos donde stock &lt; stock_minimo, mostrando cuántas unidades faltan, ordenados por urgencia (más faltantes primero). Excluye productos eliminados."
-SELECT
-    codigo_producto,
-    nombre,
-    categoria,
-    stock,
-    stock_minimo,
-    stock_minimo - stock AS unidades_faltantes
-FROM productos
-WHERE stock < stock_minimo
-  AND deleted_at IS NULL
-ORDER BY unidades_faltantes DESC;
+Reportes empresariales
 
--- Reporte 2 — Margen de ganancia top 10
--- > "Dame los 10 productos con mayor margen absoluto (precio - costo), incluyendo el margen porcentual. Solo productos no eliminados (deleted_at IS NULL)."
-SELECT
-    nombre,
-    categoria,
-    precio,
-    costo,
-    precio - costo AS margen_abs,
-    ROUND(((precio - costo) / precio) * 100, 2) AS margen_pct
-FROM productos
-WHERE deleted_at IS NULL
-ORDER BY margen_abs DESC
-LIMIT 10;
-
--- Reporte 3 — Revenue por categoría
--- > "Cuánto vendió cada categoría en total: número de ventas, unidades, revenue."
--- Nota: este query usa JOIN — herramienta de Week 4. Si todavía no
--- la viste, no te angusties. Lo presentamos aquí como aperitivo.
-SELECT
-    p.categoria,
-    COUNT(v.id)      AS num_ventas,
-    SUM(v.cantidad)  AS unidades,
-    SUM(v.total)     AS revenue_total
-FROM ventas v
-JOIN productos p ON v.producto_id = p.id
-GROUP BY p.categoria
-ORDER BY revenue_total DESC;
-
-COMMIT;
+Buenas prácticas de desarrollo backend
 
 
+🏆 Valor para empresas
+Este módulo es equivalente a lo que usan:
 
+Sistemas de compras
 
+ERP básicos
+
+Inventarios de retail
+
+E‑commerce
+
+Control de almacén
+
+Con este tipo de entregables demuestras que puedes trabajar en:
+
+Data Analyst
+
+SQL Developer
+
+Backend Jr
+
+Compras técnicas con manejo de datos
+
+BI con bases limpias
