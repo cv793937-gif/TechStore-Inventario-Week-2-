@@ -117,6 +117,6 @@ Backend Jr
 
 Compras técnicas con manejo de datos
 
-Foto de Bd 194827.png
+
 
 BI con bases limpias
