@@ -117,4 +117,9 @@ Backend Jr
 
 Compras técnicas con manejo de datos
 
+Inventario de TechStore - Semana 2
+/
+Foto de Bd 194827.png
+
+
 BI con bases limpias
